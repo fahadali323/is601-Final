@@ -1,6 +1,8 @@
 # Calculations App — README
 
 This repository contains a FastAPI application for managing calculations and user accounts. Below are concise instructions to run the app, run tests, and push a Docker image to Docker Hub.
+- Docker Hub Url:https://hub.docker.com/r/fahadali323/is601_final
+- Video Url:
 
 ## Run the application (local, development)
 
@@ -65,9 +67,9 @@ docker login
 docker push your-docker-username/is601-final:latest
 ```
 
-- Replace `your-docker-username` with your Docker Hub username. Your Docker Hub repository URL will look like:
+- Docker Hub Url:
 
-https://hub.docker.com/repository/docker/your-docker-username/is601-final
+https://hub.docker.com/r/fahadali323/is601_final
 
 ## Quick Commands
 
@@ -93,4 +95,3 @@ docker push your-docker-username/is601-final:latest
 
 ---
 
-If you want, I can update this README with your actual Docker Hub repository URL or add a short section describing environment variables used by the app.
