@@ -37,7 +37,7 @@ from app.models.calculation import Calculation  # Database model for calculation
 from app.models.user import User  # Database model for users
 from app.schemas.calculation import CalculationBase, CalculationResponse, CalculationUpdate  # API request/response schemas
 from app.schemas.token import TokenResponse  # API token schema
-from app.schemas.user import UserCreate, UserResponse, UserLogin  # User schemas
+from app.schemas.user import UserCreate, UserResponse, UserLogin, UserUpdate, PasswordUpdate  # User schemas
 from app.database import Base, get_db, engine  # Database connection
 
 
@@ -255,6 +255,85 @@ def login_form(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
         "token_type": "bearer"
     }
 
+
+
+
+# ----------------------------------------------------------------------------
+# User Profile & Password Endpoints
+# ----------------------------------------------------------------------------
+
+
+@app.get("/profile", response_class=HTMLResponse, tags=["web"])
+def profile_page(request: Request):
+    """
+    Render the edit profile page (web form).
+    """
+    return templates.TemplateResponse("edit_profile.html", {"request": request})
+
+
+@app.get("/profile/password", response_class=HTMLResponse, tags=["web"])
+def change_password_page(request: Request):
+    """
+    Render the change password page (web form).
+    """
+    return templates.TemplateResponse("change_password.html", {"request": request})
+
+
+@app.put("/auth/profile", response_model=UserResponse, tags=["auth"])
+def update_profile(
+    user_update: UserUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update current user's profile (username, email, first/last name).
+    Ensures usernames and emails remain unique.
+    """
+    data = user_update.dict(exclude_none=True)
+    # Check for conflicts on email/username
+    if "email" in data:
+        existing = db.query(User).filter(User.email == data["email"], User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already in use")
+    if "username" in data:
+        existing = db.query(User).filter(User.username == data["username"], User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already in use")
+
+    # Load ORM user from DB (dependency returns a schema-like object)
+    orm_user = db.query(User).filter(User.id == current_user.id).first()
+    if not orm_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    orm_user.update(**data)
+    db.commit()
+    db.refresh(orm_user)
+    return orm_user
+
+
+@app.put("/auth/password", tags=["auth"])
+def update_password(
+    pw_update: PasswordUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Change the current user's password after verifying the current password.
+    New password is hashed before storing.
+    """
+    # Load ORM user from DB
+    orm_user = db.query(User).filter(User.id == current_user.id).first()
+    if not orm_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if not orm_user.verify_password(pw_update.current_password):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Current password is incorrect")
+
+    # Hash and set new password
+    orm_user.password = User.hash_password(pw_update.new_password)
+    orm_user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"message": "Password updated successfully"}
 
 # ------------------------------------------------------------------------------
 # Calculations Endpoints (BREAD)

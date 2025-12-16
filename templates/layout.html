@@ -61,6 +61,8 @@
         <!-- Right side: user greeting & logout -->
         <div class="flex items-center space-x-4">
           <span id="layoutUserWelcome" class="text-sm font-medium text-white hidden md:block"></span>
+          <a id="layoutProfileLink" href="/profile" class="text-white hover:underline hidden sm:inline">Profile</a>
+          <a id="layoutChangePassLink" href="/profile/password" class="text-white hover:underline hidden sm:inline">Change Password</a>
           <button
             id="layoutLogoutBtn"
             class="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors duration-200 
@@ -168,6 +170,16 @@
     }
 
     // Toast notification system
+    
+
+    // Show/hide profile links based on auth status
+    const profileLink = document.getElementById('layoutProfileLink');
+    const changePassLink = document.getElementById('layoutChangePassLink');
+    const globalToken = localStorage.getItem('access_token');
+    if (profileLink) profileLink.style.display = globalToken ? 'inline' : 'none';
+    if (changePassLink) changePassLink.style.display = globalToken ? 'inline' : 'none';
+
+    
     window.showToast = function(message, type = 'info', duration = 5000) {
       const toast = document.createElement('div');
       

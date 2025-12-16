@@ -1,0 +1,94 @@
+{% extends "layout.html" %}
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded p-6">
+  <h2 class="text-xl font-semibold mb-4">Edit Profile</h2>
+  <form id="profileForm" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">First name</label>
+      <input id="firstName" type="text" class="mt-1 block w-full" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Last name</label>
+      <input id="lastName" type="text" class="mt-1 block w-full" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Email</label>
+      <input id="email" type="email" class="mt-1 block w-full" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Username</label>
+      <input id="username" type="text" class="mt-1 block w-full" />
+    </div>
+    <div>
+      <button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const token = localStorage.getItem('access_token');
+  if (!token) { window.location.href = '/login'; return; }
+
+  // Prefill form with localStorage values if available
+  document.getElementById('firstName').value = localStorage.getItem('first_name') || '';
+  document.getElementById('lastName').value = localStorage.getItem('last_name') || '';
+  document.getElementById('email').value = localStorage.getItem('email') || '';
+  document.getElementById('username').value = localStorage.getItem('username') || '';
+
+  document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    const payload = {
+      first_name: document.getElementById('firstName').value.trim() || undefined,
+      last_name: document.getElementById('lastName').value.trim() || undefined,
+      email: document.getElementById('email').value.trim() || undefined,
+      username: document.getElementById('username').value.trim() || undefined
+    };
+
+    // Remove undefined keys
+    Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
+    try {
+      const resp = await fetch('/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        if (resp.status === 401) { localStorage.clear(); window.location.href = '/login'; return; }
+        const err = await resp.json().catch(()=>({detail:'Unknown error'}));
+        throw new Error(err.detail || 'Failed to update profile');
+      }
+
+      const user = await resp.json();
+      // Update localStorage for display
+      localStorage.setItem('username', user.username);
+      localStorage.setItem('email', user.email);
+      localStorage.setItem('first_name', user.first_name);
+      localStorage.setItem('last_name', user.last_name);
+
+      showToast('Profile updated', 'success');
+      setTimeout(()=> window.location.href = '/dashboard', 700);
+    } catch (err) {
+      showToast(err.message || 'Error updating profile', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  });
+});
+</script>
+{% endblock %}
